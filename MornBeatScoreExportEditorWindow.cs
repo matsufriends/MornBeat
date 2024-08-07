@@ -68,12 +68,12 @@ namespace MornBeat
                         var tick = measure * measureTick + index;
                         if (dict.TryGetValue(tick, out var value))
                         {
-                            sb.Append(_cachedConverter.ConvertToChar(value));
+                            sb.Append(_cachedConverter.ConvertToText(value));
                             dict.Remove(tick);
                         }
                         else
                         {
-                            sb.Append(_cachedConverter.ConvertToChar(0));
+                            sb.Append(_cachedConverter.ConvertToText(0));
                         }
                     }
 

@@ -1,30 +1,114 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace MornBeat
 {
     public abstract class MornBeatConverterBase : ScriptableObject
     {
-        public List<MornBeatNote> ConvertToNotes(TextAsset textAsset)
+        protected abstract (int, char)[] ConvertArray { get; }
+
+        public Dictionary<int, MornBeatAction<TEnum>> GetDictionary<TEnum>(TextAsset textAsset) where TEnum : Enum
         {
-            var list = new List<MornBeatNote>();
+            var dictionary = new Dictionary<int, MornBeatAction<TEnum>>();
             var lines = textAsset.text.Split('\n');
+            var tick = 0;
             for (var measure = 0; measure < lines.Length; measure++)
             {
                 var text = lines[measure];
-                var length = text.Length;
+
+                // IndexとLengthを無視
+                var tmpLineNotes = new List<MornBeatAction<TEnum>>();
                 for (var index = 0; index < text.Length; index++)
                 {
-                    var noteType = ConvertToNoteType(text[index]);
-                    var note = new MornBeatNote(measure, index, length, noteType);
-                    list.Add(note);
+                    var c = text[index];
+                    if (c == MornBeatUtil.OpenSplit)
+                    {
+                        var endIndex = text.IndexOf(MornBeatUtil.CloseSplit, index);
+                        if (endIndex == -1)
+                        {
+                            MornBeatUtil.LogWarning("閉じられていません。");
+                            break;
+                        }
+
+                        var lengthText = text.Substring(index + 1, endIndex - index - 1);
+                        var flag = 0;
+                        foreach (var c2 in lengthText)
+                        {
+                            flag |= ConvertToNoteType(c2);
+                        }
+
+                        tmpLineNotes.Add(new MornBeatAction<TEnum>(measure, -1, (TEnum)(flag as object)));
+                    }
+                    else
+                    {
+                        var noteType = ConvertToNoteType(c);
+                        tmpLineNotes.Add(new MornBeatAction<TEnum>(measure, -1, (TEnum)(noteType as object)));
+                    }
+                }
+
+                // IndexとLengthを再計算
+                var length = tmpLineNotes.Count;
+                for (var i = 0; i < length; i++)
+                {
+                    var note = tmpLineNotes[i];
+                    if ((int)(object)note.BeatActionType != 0)
+                    {
+                        var newNote = new MornBeatAction<TEnum>(note.Measure, i, note.BeatActionType);
+                        dictionary.Add(tick, newNote);
+                    }
+
+                    tick++;
                 }
             }
 
-            return list;
+            return dictionary;
         }
 
-        public abstract int ConvertToNoteType(char c);
-        public abstract char ConvertToChar(int noteType);
+        private int ConvertToNoteType(char c)
+        {
+            foreach (var pair in ConvertArray)
+            {
+                if (pair.Item2 == c)
+                {
+                    return pair.Item1;
+                }
+            }
+
+            return 0;
+        }
+
+        public string ConvertToText(int noteType)
+        {
+            var list = new List<char>();
+            foreach (var pair in ConvertArray)
+            {
+                if (noteType.BitHas(pair.Item1))
+                {
+                    list.Add(pair.Item2);
+                }
+            }
+
+            if (list.Count == 0)
+            {
+                return "0";
+            }
+
+            if (list.Count == 1)
+            {
+                return list[0].ToString();
+            }
+
+            var sb = new StringBuilder();
+            sb.Append(MornBeatUtil.OpenSplit);
+            foreach (var c in list)
+            {
+                sb.Append(c);
+            }
+
+            sb.Append(MornBeatUtil.CloseSplit);
+            return sb.ToString();
+        }
     }
 }

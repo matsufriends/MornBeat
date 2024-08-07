@@ -10,6 +10,8 @@ namespace MornBeat
         private const bool ShowLOG = true;
 #endif
         private const string Prefix = "[<color=green>MornBeat</color>] ";
+        internal const char OpenSplit = '[';
+        internal const char CloseSplit = ']';
 
         internal static void Log(string message)
         {
@@ -44,6 +46,11 @@ namespace MornBeat
         internal static double Lerp(double a, double b, double t)
         {
             return a + (b - a) * t;
+        }
+        
+        internal static bool BitHas(this int self, int flag)
+        {
+            return (self & flag) != 0;
         }
 
         internal static bool BitEqual(this int self, int flag)
