@@ -6,14 +6,17 @@ namespace MornBeat
 {
     public interface IMornBeatActionSettingSo
     {
+        int MeasureTick { get; }
         ValueTuple<Enum, string, Color>[] DisplayTuples { get; }
         Dictionary<int, MornBeatAction<TEnum>> GetDictionary<TEnum>() where TEnum : Enum;
+        Dictionary<int, int> GetDictionary();
     }
 
     public abstract class MornBeatActionSettingSoBase<TEnum> : ScriptableObject, IMornBeatActionSettingSo where TEnum : Enum
     {
         [SerializeField] private int _measureTick;
         [SerializeField] private List<MornBeatAction<TEnum>> _beatAction;
+        public int MeasureTick => _measureTick;
 
         Dictionary<int, MornBeatAction<T>> IMornBeatActionSettingSo.GetDictionary<T>()
         {
@@ -32,6 +35,18 @@ namespace MornBeat
             }
 
             return dict;
+        }
+
+        Dictionary<int, int> IMornBeatActionSettingSo.GetDictionary()
+        {
+            var dict = ((IMornBeatActionSettingSo)this).GetDictionary<TEnum>();
+            var result = new Dictionary<int, int>();
+            foreach (var pair in dict)
+            {
+                result.Add(pair.Key, (int)(object)pair.Value.BeatActionType);
+            }
+
+            return result;
         }
 
         public abstract ValueTuple<Enum, string, Color>[] DisplayTuples { get; }
