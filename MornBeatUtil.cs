@@ -47,7 +47,7 @@ namespace MornBeat
         {
             return a + (b - a) * t;
         }
-        
+
         internal static bool BitHas(this int self, int flag)
         {
             return (self & flag) != 0;

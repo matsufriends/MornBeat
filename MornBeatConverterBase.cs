@@ -36,14 +36,14 @@ namespace MornBeat
                         var flag = 0;
                         foreach (var c2 in lengthText)
                         {
-                            flag |= ConvertToNoteType(c2);
+                            flag |= ToFlag(c2);
                         }
 
                         tmpLineNotes.Add(new MornBeatAction<TEnum>(measure, -1, (TEnum)(flag as object)));
                     }
                     else
                     {
-                        var noteType = ConvertToNoteType(c);
+                        var noteType = ToFlag(c);
                         tmpLineNotes.Add(new MornBeatAction<TEnum>(measure, -1, (TEnum)(noteType as object)));
                     }
                 }
@@ -66,7 +66,7 @@ namespace MornBeat
             return dictionary;
         }
 
-        private int ConvertToNoteType(char c)
+        public int ToFlag(char c)
         {
             foreach (var pair in ConvertArray)
             {
