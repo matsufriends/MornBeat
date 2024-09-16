@@ -40,6 +40,7 @@ namespace MornBeat
                         }
 
                         tmpLineNotes.Add(new MornBeatAction<TEnum>(measure, -1, (TEnum)(flag as object)));
+                        index = endIndex;
                     }
                     else
                     {
