@@ -12,7 +12,8 @@ namespace MornBeat
         public Dictionary<int, MornBeatAction<TEnum>> GetDictionary<TEnum>(TextAsset textAsset) where TEnum : Enum
         {
             var dictionary = new Dictionary<int, MornBeatAction<TEnum>>();
-            var lines = textAsset.text.Split('\n');
+            // 空欄を除く
+            var lines = textAsset.text.Replace(" ", "").Split('\n', '\r');
             var tick = 0;
             for (var measure = 0; measure < lines.Length; measure++)
             {
