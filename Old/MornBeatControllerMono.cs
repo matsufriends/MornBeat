@@ -9,7 +9,8 @@ namespace MornBeat
     public sealed class MornBeatControllerMono : MonoBehaviour
     {
         private const double PlayStartOffset = 0.5d;
-        [SerializeField] private AudioSource _audioSource;
+        [SerializeField] private AudioSource _introAudioSource;
+        [SerializeField] private AudioSource _loopAudioSource;
         [SerializeField] [ReadOnly] private MornBeatMemoSo _currentBeatMemo;
         [SerializeField] [ReadOnly] private int _tick;
         [SerializeField] [ReadOnly] private bool _waitLoop;
@@ -31,13 +32,9 @@ namespace MornBeat
         public double CurrentBeatLength => 60d / CurrentBpm;
         public double StartDspTime => _startDspTime;
         /// <summary> ループ時に0から初期化 </summary>
-        public double MusicPlayingTime =>
-            AudioSettings.dspTime - _loopStartDspTime + (_currentBeatMemo != null ? _currentBeatMemo.Offset : 0) +
-            _offsetTime;
+        public double MusicPlayingTime => AudioSettings.dspTime - _loopStartDspTime + (_currentBeatMemo != null ? _currentBeatMemo.Offset : 0) + _offsetTime;
         /// <summary> ループ後に値を継続 </summary>
-        public double MusicPlayingTimeNoRepeat =>
-            AudioSettings.dspTime - _startDspTime + (_currentBeatMemo != null ? _currentBeatMemo.Offset : 0) +
-            _offsetTime;
+        public double MusicPlayingTimeNoRepeat => AudioSettings.dspTime - _startDspTime + (_currentBeatMemo != null ? _currentBeatMemo.Offset : 0) + _offsetTime;
         public double MusicBeatTime => MusicPlayingTime / CurrentBeatLength;
         public double MusicBeatTimeNoRepeat => MusicPlayingTimeNoRepeat / CurrentBeatLength;
 
@@ -64,7 +61,8 @@ namespace MornBeat
             _initializeBeatSubject = new Subject<MornBeatMemoSo>();
             _endBeatSubject = new Subject<Unit>();
             _updateBeatSubject = new Subject<Unit>();
-            _audioSource.Stop();
+            _introAudioSource.Stop();
+            _loopAudioSource.Stop();
         }
 
         public float GetBeatTiming(int tick)
@@ -79,10 +77,9 @@ namespace MornBeat
             var time = MusicPlayingTime;
             if (_waitLoop)
             {
-                var length = _currentBeatMemo.Clip.length;
-                if (time < length) return;
-                _loopStartDspTime += length;
-                time -= length;
+                if (time < _currentBeatMemo.TotalLength) return;
+                _loopStartDspTime += _currentBeatMemo.LoopLength;
+                time -= _currentBeatMemo.LoopLength;
                 _waitLoop = false;
             }
 
@@ -92,7 +89,7 @@ namespace MornBeat
             _tick++;
             if (_tick == _currentBeatMemo.TickSum)
             {
-                if (_currentBeatMemo.IsLoop) _tick = 0;
+                if (_currentBeatMemo.IsLoop) _tick = _currentBeatMemo.IntroTickSum;
                 _waitLoop = true;
                 _endBeatSubject.OnNext(Unit.Default);
             }
@@ -106,10 +103,14 @@ namespace MornBeat
             _waitLoop = false;
             _startDspTime = AudioSettings.dspTime + PlayStartOffset;
             _loopStartDspTime = _startDspTime;
-            _audioSource.loop = beatMemo.IsLoop;
-            _audioSource.clip = beatMemo.Clip;
-            _audioSource.volume = beatMemo.Volume;
-            _audioSource.PlayScheduled(_startDspTime);
+            _introAudioSource.loop = false;
+            _loopAudioSource.loop = beatMemo.IsLoop;
+            _introAudioSource.clip = beatMemo.IntroClip;
+            _loopAudioSource.clip = beatMemo.Clip;
+            _introAudioSource.volume = beatMemo.Volume;
+            _loopAudioSource.volume = beatMemo.Volume;
+            _introAudioSource.PlayScheduled(_startDspTime);
+            _loopAudioSource.PlayScheduled(_startDspTime + beatMemo.IntroLength);
             _initializeBeatSubject.OnNext(beatMemo);
         }
 

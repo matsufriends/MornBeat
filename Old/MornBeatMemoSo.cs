@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace MornBeat
 {
@@ -11,18 +13,25 @@ namespace MornBeat
     {
         [SerializeField] private bool _isLoop;
         [SerializeField] private List<float> _timingList;
+        [SerializeField] private int _introTickSum;
         [SerializeField] private List<BpmAndTimeInfo> _bpmAndTimeInfoList;
         [SerializeField] private int _measureTickCount = 8;
         [SerializeField] private int _beatCount = 4;
         [SerializeField] private double _interval = 0.000001d;
+        [SerializeField] private AudioClip _introClip;
         [SerializeField] private AudioClip _clip;
         [SerializeField] [Range(0, 1f)] private float _volume = 1f;
         [SerializeField] private float _offset;
         public bool IsLoop => _isLoop;
         public int MeasureTickCount => _measureTickCount;
         public int BeatCount => _beatCount;
+        public int IntroTickSum => _introTickSum;
         public int TickSum => _timingList.Count;
+        public AudioClip IntroClip => _introClip;
         public AudioClip Clip => _clip;
+        public float IntroLength => _introClip == null ? 0 : _introClip.length;
+        public float LoopLength => _clip.length;
+        public float TotalLength => IntroLength + LoopLength;
         public float Volume => _volume;
         internal float Offset => _offset;
 
@@ -34,7 +43,6 @@ namespace MornBeat
         public float GetBeatTiming(int index)
         {
             if (index < 0 || TickSum <= index) return Mathf.Infinity;
-
             return _timingList[index];
         }
 
@@ -43,15 +51,20 @@ namespace MornBeat
             Assert.IsNotNull(_clip);
             var beat = 0d;
             var time = 0d;
+            _introTickSum = 0;
             _interval = Math.Max(0.000001f, _interval);
             _timingList.Clear();
             _timingList.Add(0);
-            var length = _clip.length;
-            while (time < length)
+            var totalLength = TotalLength;
+            while (time < totalLength)
             {
                 var bpm = GetBpm(time);
                 var dif = bpm / 60 * _measureTickCount / _beatCount * _interval;
-                if (Math.Floor(beat) < Math.Floor(beat + dif)) _timingList.Add((float)time % length);
+                if (Math.Floor(beat) < Math.Floor(beat + dif))
+                {
+                    _timingList.Add((float)time % totalLength);
+                    if (time < IntroLength) _introTickSum++;
+                }
 
                 beat += dif;
                 time += _interval;
@@ -59,6 +72,9 @@ namespace MornBeat
 
             var remove = _timingList.Count % _measureTickCount;
             for (var i = 0; i < remove; i++) _timingList.RemoveAt(_timingList.Count - 1);
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+#endif
         }
 
         public double GetBpm(double time)
@@ -72,11 +88,9 @@ namespace MornBeat
             }
 
             if (time < _bpmAndTimeInfoList[0].Time) return _bpmAndTimeInfoList[0].Bpm;
-
             for (var i = 1; i < _bpmAndTimeInfoList.Count; i++)
             {
                 if (_bpmAndTimeInfoList[i].Time <= time) continue;
-
                 var begin = _bpmAndTimeInfoList[i - 1];
                 var end = _bpmAndTimeInfoList[i];
                 var t1 = MornBeatUtil.InverseLerp(begin.Time, end.Time, time);
